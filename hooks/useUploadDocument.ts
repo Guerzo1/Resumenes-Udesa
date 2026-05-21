@@ -35,7 +35,7 @@ export function useUploadDocument() {
     if (!supabase) {
       setState({
         loading: false,
-        error: "Faltan las variables de entorno de Supabase.",
+        error: "Missing Supabase environment variables.",
         success: null
       });
       return false;
@@ -47,29 +47,29 @@ export function useUploadDocument() {
     const uploaderName = sanitizeInput(payload.uploaderName, 80);
 
     if (!subject) {
-      setState({ loading: false, error: "Ingresá el nombre de la materia.", success: null });
+      setState({ loading: false, error: "Enter the subject name.", success: null });
       return false;
     }
 
     if (!MATERIAL_TYPES.includes(payload.type)) {
-      setState({ loading: false, error: "Elegí un tipo de material válido.", success: null });
+      setState({ loading: false, error: "Choose a valid material type.", success: null });
       return false;
     }
 
     if (!payload.file) {
-      setState({ loading: false, error: "Seleccioná un archivo PDF.", success: null });
+      setState({ loading: false, error: "Select a PDF file.", success: null });
       return false;
     }
 
     if (!isPdf(payload.file)) {
-      setState({ loading: false, error: "Solo se permiten archivos PDF.", success: null });
+      setState({ loading: false, error: "Only PDF files are allowed.", success: null });
       return false;
     }
 
     if (payload.file.size > MAX_PDF_SIZE) {
       setState({
         loading: false,
-        error: "El PDF no puede superar los 12 MB.",
+        error: "The PDF cannot exceed 12 MB.",
         success: null
       });
       return false;
@@ -84,9 +84,16 @@ export function useUploadDocument() {
     });
 
     if (upload.error) {
+      console.error("Supabase Storage upload failed", {
+        bucket: STORAGE_BUCKET,
+        path,
+        message: upload.error.message,
+        statusCode: upload.error.statusCode,
+        error: upload.error
+      });
       setState({
         loading: false,
-        error: "No se pudo subir el PDF. Revisá la configuración de Storage.",
+        error: `Upload failed: ${upload.error.message || "unknown error"}`,
         success: null
       });
       return false;
@@ -108,10 +115,11 @@ export function useUploadDocument() {
     });
 
     if (insert.error) {
+      console.error("Supabase documents insert failed", insert.error);
       await supabase.storage.from(STORAGE_BUCKET).remove([path]);
       setState({
         loading: false,
-        error: "El PDF subió, pero no se pudo guardar el registro.",
+        error: `Upload saved, but the record failed: ${insert.error.message || "unknown error"}`,
         success: null
       });
       return false;
@@ -120,7 +128,7 @@ export function useUploadDocument() {
     setState({
       loading: false,
       error: null,
-      success: "Archivo subido correctamente."
+      success: "File uploaded successfully."
     });
 
     return true;

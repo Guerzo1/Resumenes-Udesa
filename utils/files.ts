@@ -1,5 +1,5 @@
 export const MAX_PDF_SIZE = 12 * 1024 * 1024;
-export const STORAGE_BUCKET = "documents";
+export const STORAGE_BUCKET = "DOCUMENTS";
 
 export function isPdf(file: File) {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
