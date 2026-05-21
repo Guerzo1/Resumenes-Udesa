@@ -85,7 +85,7 @@ export function useUploadDocument() {
 
     const path = `${crypto.randomUUID()}.${fileExt}`;
 
-    const upload = await supabase.storage.from(STORAGE_BUCKET).upload(path, payload.file, {
+    const upload = await supabase.storage.from(STORAGE_BUCKET).upload("test.pdf", payload.file, {
       cacheControl: "3600",
       contentType: "application/pdf",
       upsert: false
