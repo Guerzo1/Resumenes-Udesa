@@ -54,7 +54,7 @@ grant execute on function public.increment_document_downloads(uuid) to anon;
 grant execute on function public.increment_document_downloads(uuid) to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('DOCUMENTS', 'DOCUMENTS', true, 12582912, array['application/pdf'])
+values ('documents', 'documents', true, 12582912, array['application/pdf'])
 on conflict (id) do update
 set public = excluded.public,
     file_size_limit = excluded.file_size_limit,
@@ -63,12 +63,12 @@ set public = excluded.public,
 drop policy if exists "Anyone can read PDF files" on storage.objects;
 create policy "Anyone can read PDF files"
 on storage.objects for select
-using (bucket_id = 'DOCUMENTS');
+using (bucket_id = 'documents');
 
 drop policy if exists "Anyone can upload PDF files" on storage.objects;
 create policy "Anyone can upload PDF files"
 on storage.objects for insert
 with check (
-  bucket_id = 'DOCUMENTS'
+  bucket_id = 'documents'
   and lower(right(name, 4)) = '.pdf'
 );
