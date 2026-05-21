@@ -7,19 +7,8 @@ export function isPdf(file: File) {
 
 export function buildStoragePath(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase() || "pdf";
-  const safeName = file.name
-    .replace(/\.[^/.]+$/, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
 
-  const rawPath = `${crypto.randomUUID()}-${safeName || "archivo"}.${extension}`;
-  return rawPath
-    .replace(/\\/g, "/")
-    .replace(/\/+/g, "/")
-    .replace(/^\/+/, "")
-    .replace(/\/+$/, "");
+  return `${crypto.randomUUID()}.${extension}`;
 }
 
 export function isValidStoragePath(path: string) {
