@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { MATERIAL_TYPES, type MaterialType } from "@/lib/types";
-import { buildStoragePath, isPdf, MAX_PDF_SIZE, STORAGE_BUCKET } from "@/utils/files";
+import {
+  buildStoragePath,
+  isPdf,
+  isValidStoragePath,
+  MAX_PDF_SIZE,
+  STORAGE_BUCKETS
+} from "@/utils/files";
 import { sanitizeInput } from "@/utils/text";
 
 type UploadState = {
@@ -76,24 +82,44 @@ export function useUploadDocument() {
     }
 
     const path = buildStoragePath(payload.file);
+    if (!isValidStoragePath(path)) {
+      setState({
+        loading: false,
+        error: "The generated file path is invalid.",
+        success: null
+      });
+      return false;
+    }
 
-    const upload = await supabase.storage.from(STORAGE_BUCKET).upload(path, payload.file, {
-      cacheControl: "3600",
-      contentType: "application/pdf",
-      upsert: false
-    });
+    let uploadedBucket: string | null = null;
+    let lastUploadError: { message?: string; statusCode?: string | number } | null = null;
 
-    if (upload.error) {
+    for (const bucket of STORAGE_BUCKETS) {
+      const upload = await supabase.storage.from(bucket).upload(path, payload.file, {
+        cacheControl: "3600",
+        contentType: "application/pdf",
+        upsert: false
+      });
+
+      if (!upload.error) {
+        uploadedBucket = bucket;
+        break;
+      }
+
+      lastUploadError = upload.error;
       console.error("Supabase Storage upload failed", {
-        bucket: STORAGE_BUCKET,
+        bucket,
         path,
         message: upload.error.message,
         statusCode: upload.error.statusCode,
         error: upload.error
       });
+    }
+
+    if (!uploadedBucket) {
       setState({
         loading: false,
-        error: `Upload failed: ${upload.error.message || "unknown error"}`,
+        error: `Upload failed: ${lastUploadError?.message || "unknown error"}`,
         success: null
       });
       return false;
@@ -101,7 +127,7 @@ export function useUploadDocument() {
 
     const {
       data: { publicUrl }
-    } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    } = supabase.storage.from(uploadedBucket).getPublicUrl(path);
 
     const insert = await supabase.from("documents").insert({
       subject,
@@ -116,7 +142,7 @@ export function useUploadDocument() {
 
     if (insert.error) {
       console.error("Supabase documents insert failed", insert.error);
-      await supabase.storage.from(STORAGE_BUCKET).remove([path]);
+      await supabase.storage.from(uploadedBucket).remove([path]);
       setState({
         loading: false,
         error: `Upload saved, but the record failed: ${insert.error.message || "unknown error"}`,
