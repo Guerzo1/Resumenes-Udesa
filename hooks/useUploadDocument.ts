@@ -81,15 +81,9 @@ export function useUploadDocument() {
       return false;
     }
 
-    const path = buildStoragePath(payload.file);
-    if (!isValidStoragePath(path)) {
-      setState({
-        loading: false,
-        error: "The generated file path is invalid.",
-        success: null
-      });
-      return false;
-    }
+    const fileExt = payload.file.name.split(".").pop();
+
+    const path = `${crypto.randomUUID()}.${fileExt}`;
 
     const upload = await supabase.storage.from(STORAGE_BUCKET).upload(path, payload.file, {
       cacheControl: "3600",
