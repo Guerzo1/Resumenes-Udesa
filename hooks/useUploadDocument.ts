@@ -8,7 +8,7 @@ import {
   isPdf,
   isValidStoragePath,
   MAX_PDF_SIZE,
-  STORAGE_BUCKETS
+  STORAGE_BUCKET
 } from "@/utils/files";
 import { sanitizeInput } from "@/utils/text";
 
@@ -91,35 +91,23 @@ export function useUploadDocument() {
       return false;
     }
 
-    let uploadedBucket: string | null = null;
-    let lastUploadError: { message?: string; statusCode?: string | number } | null = null;
+    const upload = await supabase.storage.from(STORAGE_BUCKET).upload(path, payload.file, {
+      cacheControl: "3600",
+      contentType: "application/pdf",
+      upsert: false
+    });
 
-    for (const bucket of STORAGE_BUCKETS) {
-      const upload = await supabase.storage.from(bucket).upload(path, payload.file, {
-        cacheControl: "3600",
-        contentType: "application/pdf",
-        upsert: false
-      });
-
-      if (!upload.error) {
-        uploadedBucket = bucket;
-        break;
-      }
-
-      lastUploadError = upload.error;
+    if (upload.error) {
       console.error("Supabase Storage upload failed", {
-        bucket,
+        bucket: STORAGE_BUCKET,
         path,
         message: upload.error.message,
         statusCode: upload.error.statusCode,
         error: upload.error
       });
-    }
-
-    if (!uploadedBucket) {
       setState({
         loading: false,
-        error: `Upload failed: ${lastUploadError?.message || "unknown error"}`,
+        error: `Upload failed: ${upload.error.message || "unknown error"}`,
         success: null
       });
       return false;
@@ -127,7 +115,7 @@ export function useUploadDocument() {
 
     const {
       data: { publicUrl }
-    } = supabase.storage.from(uploadedBucket).getPublicUrl(path);
+    } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
 
     const insert = await supabase.from("documents").insert({
       subject,
@@ -142,7 +130,7 @@ export function useUploadDocument() {
 
     if (insert.error) {
       console.error("Supabase documents insert failed", insert.error);
-      await supabase.storage.from(uploadedBucket).remove([path]);
+      await supabase.storage.from(STORAGE_BUCKET).remove([path]);
       setState({
         loading: false,
         error: `Upload saved, but the record failed: ${insert.error.message || "unknown error"}`,
