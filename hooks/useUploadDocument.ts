@@ -81,15 +81,15 @@ export function useUploadDocument() {
       return false;
     }
 
-    const fileExt = payload.file.name.split(".").pop();
+    const upload = await supabase.storage
+      .from("documents")
+      .upload("test.pdf", payload.file, {
+        cacheControl: "3600",
+        contentType: "application/pdf",
+        upsert: true
+      });
 
-    const path = `${crypto.randomUUID()}.${fileExt}`;
-
-    const upload = await supabase.storage.from(STORAGE_BUCKET).upload("test.pdf", payload.file, {
-      cacheControl: "3600",
-      contentType: "application/pdf",
-      upsert: false
-    });
+    const path = "test.pdf";
 
     if (upload.error) {
       console.error("Supabase Storage upload failed", {
